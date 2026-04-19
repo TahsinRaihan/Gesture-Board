@@ -5,8 +5,8 @@
 
 import { Point } from '@/types';
 
-const CURSOR_SMOOTHING = 0.7; // Higher = smoother but laggy
-const ACCELERATION = 1.2; // Small fast movements feel responsive
+const CURSOR_SMOOTHING = 0.3; // Lower = less lag, more responsive
+const ACCELERATION = 2.0; // Higher = more responsive to fast movements
 
 let lastCursorPos: Point = { x: 0, y: 0 };
 let lastRawPos: Point = { x: 0, y: 0 };

@@ -128,6 +128,13 @@ body {
   background: var(--secondary-color);
 }
 
+/* Virtual hover effect for hand gesture UI interaction */
+.virtual-hover {
+  transform: scale(1.05) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+  transition: transform 0.1s ease, box-shadow 0.1s ease !important;
+}
+
 /* Toolbar wrapper - for dragging */
 .toolbar-wrapper {
   transition: box-shadow 0.2s ease;

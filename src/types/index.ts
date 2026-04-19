@@ -71,6 +71,7 @@ export interface HandTrackingState {
   enabled: boolean;
   handPose: HandPose | null;
   cursorPosition: Point;
+  canvasCursorPosition: Point;
   currentGesture: GestureResult;
   isVisible: boolean;
 }

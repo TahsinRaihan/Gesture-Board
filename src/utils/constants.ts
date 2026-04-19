@@ -46,7 +46,7 @@ export const HAND_TRACKING_CONFIG = {
 };
 
 export const GESTURE_CONFIG = {
-  PINCH_THRESHOLD: 0.05,
+  PINCH_THRESHOLD: 0.3, // Increased to 30% for easier pinch detection
   POINT_THRESHOLD: 0.1,
 };
 

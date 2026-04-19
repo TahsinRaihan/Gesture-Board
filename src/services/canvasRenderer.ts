@@ -129,16 +129,29 @@ export const drawObject = (obj: DrawingObject): void => {
  * Draw freehand path
  */
 const drawFreehand = (points: Point[]): void => {
-  if (!canvasContext || points.length === 0) return;
+  if (!canvasContext || points.length < 2) return;
 
   // Smooth the points for better visual quality
-  const smoothedPoints = smoothPoints(points, 0.2);
+  const smoothedPoints = smoothPoints(points, 0.3);
 
   canvasContext.beginPath();
   canvasContext.moveTo(smoothedPoints[0].x, smoothedPoints[0].y);
 
-  for (let i = 1; i < smoothedPoints.length; i++) {
-    canvasContext.lineTo(smoothedPoints[i].x, smoothedPoints[i].y);
+  for (let i = 1; i < smoothedPoints.length - 1; i++) {
+    const current = smoothedPoints[i];
+    const next = smoothedPoints[i + 1];
+    
+    // Use quadratic curve for smooth interpolation
+    const controlX = (current.x + next.x) / 2;
+    const controlY = (current.y + next.y) / 2;
+    
+    canvasContext.quadraticCurveTo(current.x, current.y, controlX, controlY);
+  }
+
+  // Draw the last segment
+  if (smoothedPoints.length > 1) {
+    const last = smoothedPoints[smoothedPoints.length - 1];
+    canvasContext.lineTo(last.x, last.y);
   }
 
   canvasContext.stroke();

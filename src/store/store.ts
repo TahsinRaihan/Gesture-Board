@@ -48,6 +48,7 @@ interface Actions {
   // Hand tracking actions
   setHandPose: (pose: HandPose | null) => void;
   setCursorPosition: (position: Point) => void;
+  setCanvasCursorPosition: (position: Point) => void;
   setCurrentGesture: (gesture: GestureResult) => void;
   setHandGestureEnabled: (enabled: boolean) => void;
 
@@ -85,6 +86,7 @@ const createInitialState = (): State => {
     enabled: false,
     handPose: null,
     cursorPosition: { x: 0, y: 0 },
+    canvasCursorPosition: { x: 0, y: 0 },
     currentGesture: { type: 'none', confidence: 0 },
     isVisible: false,
 
@@ -260,6 +262,10 @@ export const useStore = create<State & Actions>((set) => ({
 
   setCursorPosition: (position: Point) => {
     set({ cursorPosition: position });
+  },
+
+  setCanvasCursorPosition: (position: Point) => {
+    set({ canvasCursorPosition: position });
   },
 
   setCurrentGesture: (gesture: GestureResult) => {

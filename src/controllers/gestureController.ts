@@ -16,10 +16,9 @@ let lastGestureTime = 0;
 const GESTURE_DEBOUNCE = 200; // ms
 
 let isDrawingWithGesture = false;
+let pinchHoldCounter = 0;
+const PINCH_HOLD_THRESHOLD = 3; // Frames to hold pinch state
 
-/**
- * Handle gesture events
- */
 export const handleGesture = (
   gesture: GestureResult,
   cursorPosition: Point
@@ -29,19 +28,28 @@ export const handleGesture = (
 
   if (!state.isHandGestureEnabled) return;
 
+  // Update pinch hold counter
+  if (gesture.type === 'pinch') {
+    pinchHoldCounter = PINCH_HOLD_THRESHOLD;
+  } else {
+    pinchHoldCounter = Math.max(0, pinchHoldCounter - 1);
+  }
+
+  // Use stable pinch state
+  const stablePinch = pinchHoldCounter > 0;
+
   // Debounce clicks to prevent rapid-fire actions
   if (now - lastGestureTime < GESTURE_DEBOUNCE) {
     return;
   }
 
-  switch (gesture.type) {
-    case 'pinch':
-      handlePinch(cursorPosition);
-      break;
-
-    default:
-      handlePointingGesture(cursorPosition);
-      break;
+  if (stablePinch) {
+    handlePinch(cursorPosition);
+  } else {
+    // Only release if pinch has been gone for a while
+    if (pinchHoldCounter === 0 && isDrawingWithGesture) {
+      handleGestureReleased(cursorPosition);
+    }
   }
 
   lastGestureTime = now;
@@ -68,14 +76,20 @@ const handlePinch = (cursorPosition: Point): void => {
     if (!isDrawingWithGesture) {
       startDrawing(cursorPosition);
       isDrawingWithGesture = true;
+    } else {
+      // Continue drawing for smooth lines
+      continueDrawing(cursorPosition);
     }
   } else if (state.activeTool === 'select') {
-    // Handle selection
-    const obj = getObjectAtPoint(cursorPosition, 15);
-    if (obj) {
-      state.selectObject(obj.id);
-    } else {
-      state.deselectObject();
+    // Handle selection - only on initial pinch, not continuous
+    if (!isDrawingWithGesture) {
+      const obj = getObjectAtPoint(cursorPosition, 15);
+      if (obj) {
+        state.selectObject(obj.id);
+      } else {
+        state.deselectObject();
+      }
+      isDrawingWithGesture = true; // Prevent repeated selections
     }
   } else if (state.activeTool === 'text') {
     // For text tool, we'll handle it in App.tsx since it needs to set state
@@ -83,26 +97,11 @@ const handlePinch = (cursorPosition: Point): void => {
   }
 };
 
-/**
- * Release pinch gesture = Release drawing
- */
-export const handleGestureReleased = (gesture: GestureResult, cursorPosition: Point): void => {
+export const handleGestureReleased = (cursorPosition: Point): void => {
   // If gesture was pinch and now it's not, finish drawing
-  if (isDrawingWithGesture && gesture.type !== 'pinch') {
+  if (isDrawingWithGesture) {
     finishDrawing(cursorPosition);
     isDrawingWithGesture = false;
-  }
-};
-
-/**
- * Pointing gesture = Move cursor, used for positioning
- */
-const handlePointingGesture = (cursorPosition: Point): void => {
-  const state = useStore.getState();
-
-  // When pointing, allow cursor positioning for tools like text placement
-  if (state.activeTool === 'text') {
-    console.log('Text position set at', cursorPosition);
   }
 };
 

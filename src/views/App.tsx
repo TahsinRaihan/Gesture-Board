@@ -54,6 +54,7 @@ const App: React.FC = () => {
   const isDraggingRef = useRef(false);
   const draggingObjectIdRef = useRef<string | null>(null);
   const [appReady, setAppReady] = useState(false);
+  const [lastHoveredElement, setLastHoveredElement] = useState<Element | null>(null);
   const [textInput, setTextInput] = useState<TextInputState>({
     isVisible: false,
     x: 0,
@@ -140,7 +141,7 @@ const App: React.FC = () => {
 
   // Mouse event handlers for drawing + Infinite Canvas (Pan/Zoom)
   useEffect(() => {
-    if (!canvasRef.current || !appReady) return;
+    if (!canvasRef.current || !appReady || state.isHandGestureEnabled) return;
 
     const canvas = canvasRef.current;
 
@@ -276,11 +277,17 @@ const App: React.FC = () => {
             const videoHeight = videoRef.current?.videoHeight || 720;
             const smoothedPos = processAirMouseCursor(indexTip, videoWidth, videoHeight);
             state.setCursorPosition(smoothedPos);
-          }
+              // Transform screen coordinates to canvas coordinates (accounting for zoom and pan)
+              const canvasPoint = {
+                x: (smoothedPos.x - panX * window.innerWidth) / zoom,
+                y: (smoothedPos.y - panY * window.innerHeight) / zoom,
+              };
+              state.setCanvasCursorPosition(canvasPoint);          }
 
           // Detect gesture
           const gesture = detectGestureSmoothed(handPose);
           state.setCurrentGesture(gesture);
+          console.log('Gesture:', gesture.type, 'Confidence:', gesture.confidence.toFixed(2));
 
           let uiClickHandled = false;
 
@@ -289,9 +296,28 @@ const App: React.FC = () => {
             // Check if cursor is over a UI element
             const elementUnderCursor = document.elementFromPoint(state.cursorPosition.x, state.cursorPosition.y);
             
+            // Handle hover effect
+            if (lastHoveredElement && lastHoveredElement !== elementUnderCursor) {
+              lastHoveredElement.classList.remove('virtual-hover');
+            }
+            if (elementUnderCursor && elementUnderCursor !== canvasRef.current && elementUnderCursor !== videoRef.current && elementUnderCursor !== document.body) {
+              const clickable = elementUnderCursor.closest('button, [role="button"], input, select, textarea, .toolbar-button, .color-button, .shape-option, .camera-toggle, .toggle-custom-button');
+              if (clickable) {
+                clickable.classList.add('virtual-hover');
+                setLastHoveredElement(clickable);
+              } else {
+                setLastHoveredElement(null);
+              }
+            } else {
+              if (lastHoveredElement) {
+                lastHoveredElement.classList.remove('virtual-hover');
+                setLastHoveredElement(null);
+              }
+            }
+            
             if (elementUnderCursor && elementUnderCursor !== document.body && elementUnderCursor !== document.documentElement) {
               // Check if it's a clickable element
-              const clickableElement = elementUnderCursor.closest('button, [role="button"], input, select, textarea, .toolbar-button, .color-swatch, .shape-button, .camera-toggle');
+              const clickableElement = elementUnderCursor.closest('button, .toolbar-button, .color-button, .shape-option, .camera-toggle, .toggle-custom-button');
               
               if (clickableElement && !clickableElement.hasAttribute('data-hand-clicked')) {
                 // Simulate click on UI element
@@ -319,10 +345,10 @@ const App: React.FC = () => {
 
           // Handle gesture for drawing (only if not UI click)
           if (gesture.type !== 'none' && !uiClickHandled) {
-            handleGesture(gesture, state.cursorPosition);
-          } else if (gesture.type === 'none') {
-            // If no gesture detected but was drawing, might have released
-            handleGestureReleased(gesture, state.cursorPosition);
+              handleGesture(gesture, state.canvasCursorPosition);
+            } else if (gesture.type === 'none') {
+              // If no gesture detected but was drawing, might have released
+              handleGestureReleased(state.canvasCursorPosition);
           }
         }
       }
@@ -402,6 +428,7 @@ const App: React.FC = () => {
         style={{
           backgroundColor: state.isHandGestureEnabled ? 'transparent' : (state.theme === 'light' ? '#ffffff' : '#0f172a'),
           transform: `scale(${zoom}) translate(${panX}px, ${panY}px)`,
+          pointerEvents: state.isHandGestureEnabled ? 'none' : 'auto',
           transformOrigin: '0 0',
           cursor: isDraggingPanel === 'pan' ? 'grab' : 'crosshair',
         }}
@@ -421,6 +448,8 @@ const App: React.FC = () => {
             border: '2px solid #00FF00',
             borderRadius: '8px',
             zIndex: 1000,
+            transform: 'scaleX(-1)', // Flip for natural self-view
+            pointerEvents: 'none', // Allow elementFromPoint to see through
           }}
         />
       )}
@@ -504,6 +533,40 @@ const App: React.FC = () => {
       )}
 
       <CameraToggle />
+
+      {/* Close Gesture Mode Button */}
+      {state.isHandGestureEnabled && (
+        <button
+          className="close-gesture-button"
+          onClick={() => {
+            if (lastHoveredElement) {
+              lastHoveredElement.classList.remove('virtual-hover');
+              setLastHoveredElement(null);
+            }
+            state.setHandGestureEnabled(false);
+            // Ensure webcam is stopped
+            stopWebcam();
+          }}
+          style={{
+            position: 'fixed',
+            top: '20px',
+            left: '20px',
+            zIndex: 1001,
+            background: '#FF6B6B',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            padding: '10px 16px',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          }}
+          title="Close Gesture Mode"
+        >
+          ✕ Close Gesture Mode
+        </button>
+      )}
 
       {/* Text Input Box */}
       {textInput.isVisible && (

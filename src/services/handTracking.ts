@@ -99,11 +99,21 @@ export const detectHandPose = (
       const landmarks = results.landmarks[0];
       const handedness = results.handedness?.[0];
 
+      // Check if video is mirrored via CSS transform
+      const isVideoMirrored = video.style.transform.includes('scaleX(-1)');
+
       // Convert normalized coordinates (0-1) to pixel coordinates
-      const points: Point[] = landmarks.map((landmark: any) => ({
-        x: landmark.x * (video?.videoWidth || 1280),
-        y: landmark.y * (video?.videoHeight || 720),
-      }));
+      const points: Point[] = landmarks.map((landmark: any) => {
+        let x = landmark.x * (video?.videoWidth || 1280);
+        if (isVideoMirrored) {
+          // Flip X-coordinate to match mirrored video display
+          x = (1 - landmark.x) * (video?.videoWidth || 1280);
+        }
+        return {
+          x,
+          y: landmark.y * (video?.videoHeight || 720),
+        };
+      });
 
       return {
         landmarks: points,
