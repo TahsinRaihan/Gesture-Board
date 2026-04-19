@@ -1,0 +1,111 @@
+/**
+ * TextInputBox Styles
+ */
+
+.text-input-box {
+  position: fixed;
+  z-index: 500;
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.text-input-container {
+  background: var(--surface);
+  border: 2px solid var(--primary-color);
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.text-input {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--background);
+  color: var(--text-primary);
+  font-family: inherit;
+  min-width: 200px;
+  outline: none;
+}
+
+.text-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.text-input-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.font-size-control {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.font-size-control label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.font-size-input {
+  width: 50px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--background);
+  color: var(--text-primary);
+  font-size: 12px;
+  outline: none;
+}
+
+.font-size-input:focus {
+  border-color: var(--primary-color);
+}
+
+.text-submit-btn,
+.text-cancel-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.text-submit-btn {
+  background: var(--primary-color);
+  color: white;
+}
+
+.text-submit-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.text-cancel-btn {
+  background: var(--border);
+  color: var(--text-secondary);
+}
+
+.text-cancel-btn:hover {
+  background: var(--secondary-color);
+  color: var(--background);
+}

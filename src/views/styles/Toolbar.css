@@ -1,0 +1,105 @@
+/**
+ * Toolbar Styles
+ */
+
+.toolbar {
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  max-height: 80vh;
+  overflow-y: auto;
+  z-index: 100;
+  min-width: 150px;
+}
+
+.toolbar-header {
+  padding: 0 0 12px 0;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: grab;
+  user-select: none;
+}
+
+.toolbar-header:active {
+  cursor: grabbing;
+}
+
+.toolbar-header h2 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.toolbar-section {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.toolbar-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.toolbar-section h3 {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.toolbar-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  background: var(--surface);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  transition: all 150ms ease;
+  margin-bottom: 4px;
+}
+
+.toolbar-button:hover {
+  background: var(--border);
+  border-color: var(--border);
+}
+
+.toolbar-button.active {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+  font-weight: 600;
+}
+
+.toolbar-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toolbar-button svg {
+  flex-shrink: 0;
+}
+
+.toolbar-button.danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.toolbar-button.danger:hover {
+  background: var(--danger);
+  color: white;
+  border-color: var(--danger);
+}

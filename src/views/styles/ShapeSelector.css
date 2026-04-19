@@ -1,0 +1,101 @@
+/**
+ * ShapeSelector Styles
+ */
+
+.shape-selector {
+  position: relative;
+  display: inline-block;
+}
+
+.shape-selector-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.shape-selector-toggle:hover {
+  background: var(--surface);
+  border-color: var(--primary-color);
+}
+
+.shape-selector-toggle.active {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.shape-selector-toggle svg:last-child {
+  transition: transform 0.2s ease;
+  width: 16px;
+  height: 16px;
+}
+
+.shape-selector-toggle.open svg:last-child {
+  transform: rotate(180deg);
+}
+
+.shape-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  z-index: 100;
+  min-width: 150px;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.shape-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.shape-option:first-child {
+  border-top: none;
+}
+
+.shape-option:hover {
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--primary-color);
+}
+
+.shape-option svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}

@@ -1,0 +1,78 @@
+/**
+ * Camera Toggle Styles
+ */
+
+.camera-toggle {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 200ms ease;
+  z-index: 110;
+  font-weight: 600;
+}
+
+.camera-toggle:hover:not(:disabled) {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.camera-toggle:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.camera-toggle.active {
+  background: var(--primary-color);
+  color: white;
+  animation: pulse 2s infinite;
+}
+
+.camera-toggle.loading {
+  opacity: 0.7;
+}
+
+.camera-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.camera-toggle .tooltip {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  margin-bottom: 12px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+  font-weight: 500;
+}
+
+.camera-toggle:hover .tooltip {
+  opacity: 1;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(37, 99, 235, 0.6);
+  }
+}
