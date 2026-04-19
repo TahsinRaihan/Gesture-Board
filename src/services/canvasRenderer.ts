@@ -645,37 +645,38 @@ export const drawHandLandmarks = (handPose: HandPose | null): void => {
 /**
  * Draw transparent mode - semi-transparent overlay with landmarks and debug info
  */
-export const drawTransparentMode = (isTransparent: boolean, handDetected: boolean = false): void => {
+export const drawTransparentMode = (isTransparent: boolean, handDetected: boolean = false, fullTransparent: boolean = false): void => {
   if (!canvasContext || !canvas) return;
 
   if (isTransparent) {
-    // Create semi-transparent overlay - make it more visible
+    // Create semi-transparent overlay - make it more visible or fully transparent
     const theme = document.documentElement.getAttribute('data-theme') || 'light';
-    const overlayColor = theme === 'dark' ? 'rgba(15, 23, 42, 0.4)' : 'rgba(255, 255, 255, 0.4)';
+    const overlayColor = fullTransparent ? 'rgba(255, 255, 255, 0.1)' : (theme === 'dark' ? 'rgba(15, 23, 42, 0.4)' : 'rgba(255, 255, 255, 0.4)');
 
     canvasContext.fillStyle = overlayColor;
     canvasContext.fillRect(0, 0, canvas.width, canvas.height);
 
     // Add border indicator - make it thick and obvious
-    canvasContext.strokeStyle = '#00FF00';
+    canvasContext.strokeStyle = handDetected ? '#00FF00' : '#FFA500';
     canvasContext.lineWidth = 4;
     canvasContext.setLineDash([10, 5]);
     canvasContext.strokeRect(5, 5, canvas.width - 10, canvas.height - 10);
     canvasContext.setLineDash([]);
 
     // Add main label
-    canvasContext.fillStyle = '#00FF00';
+    canvasContext.fillStyle = handDetected ? '#00FF00' : '#FFA500';
     canvasContext.font = 'bold 16px Arial';
-    canvasContext.fillText('🖐️ TRANSPARENT MODE - Hand Tracking ACTIVE', 10, 30);
+    const modeText = fullTransparent ? '🖐️ FULL TRANSPARENT MODE - Hand Tracking ACTIVE' : '🖐️ TRANSPARENT MODE - Hand Tracking ACTIVE';
+    canvasContext.fillText(modeText, 10, 30);
 
     // Add hand detection status
     canvasContext.font = 'bold 14px Arial';
     if (handDetected) {
       canvasContext.fillStyle = '#00FF00';
-      canvasContext.fillText('✓ Hand DETECTED - Move your hand to control', 10, 55);
+      canvasContext.fillText('✓ Hand DETECTED - Pinch to interact', 10, 55);
     } else {
-      canvasContext.fillStyle = '#FF6B6B';
-      canvasContext.fillText('✗ No hand detected - Position your hand in view', 10, 55);
+      canvasContext.fillStyle = '#FFA500';
+      canvasContext.fillText('⏳ Searching for hand - Position your hand in view', 10, 55);
     }
 
     // Add instructions

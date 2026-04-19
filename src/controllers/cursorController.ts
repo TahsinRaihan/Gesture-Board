@@ -15,16 +15,22 @@ let lastRawPos: Point = { x: 0, y: 0 };
  * Process raw hand position into smooth air mouse cursor
  * Applies smoothing, dead zone, and acceleration
  */
-export const processAirMouseCursor = (rawPosition: Point): Point => {
+export const processAirMouseCursor = (rawPosition: Point, videoWidth: number = 1280, videoHeight: number = 720): Point => {
+  // Map video coordinates to screen coordinates
+  const screenX = (rawPosition.x / videoWidth) * window.innerWidth;
+  const screenY = (rawPosition.y / videoHeight) * window.innerHeight;
+  
+  const mappedPosition = { x: screenX, y: screenY };
+
   // Step 1: Calculate velocity for acceleration
-  const deltaX = rawPosition.x - lastRawPos.x;
-  const deltaY = rawPosition.y - lastRawPos.y;
+  const deltaX = mappedPosition.x - lastRawPos.x;
+  const deltaY = mappedPosition.y - lastRawPos.y;
   const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
   // Step 2: Apply smoothing (exponential moving average)
   let smoothed = {
-    x: lastCursorPos.x * CURSOR_SMOOTHING + rawPosition.x * (1 - CURSOR_SMOOTHING),
-    y: lastCursorPos.y * CURSOR_SMOOTHING + rawPosition.y * (1 - CURSOR_SMOOTHING),
+    x: lastCursorPos.x * CURSOR_SMOOTHING + mappedPosition.x * (1 - CURSOR_SMOOTHING),
+    y: lastCursorPos.y * CURSOR_SMOOTHING + mappedPosition.y * (1 - CURSOR_SMOOTHING),
   };
 
   // Step 3: Apply acceleration for fast movements (feel snappier)
@@ -39,7 +45,7 @@ export const processAirMouseCursor = (rawPosition: Point): Point => {
   smoothed.y = Math.max(0, Math.min(window.innerHeight, smoothed.y));
 
   lastCursorPos = smoothed;
-  lastRawPos = rawPosition;
+  lastRawPos = mappedPosition;
 
   return smoothed;
 };

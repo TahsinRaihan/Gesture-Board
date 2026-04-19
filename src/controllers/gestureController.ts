@@ -9,6 +9,7 @@ import {
   startDrawing,
   continueDrawing,
   finishDrawing,
+  getObjectAtPoint,
 } from './drawingController';
 
 let lastGestureTime = 0;
@@ -38,18 +39,6 @@ export const handleGesture = (
       handlePinch(cursorPosition);
       break;
 
-    case 'pointing-up':
-      handlePointingUp(cursorPosition);
-      break;
-
-    case 'fist':
-      handleFist();
-      break;
-
-    case 'open':
-      handlePalmOpen();
-      break;
-
     default:
       handlePointingGesture(cursorPosition);
       break;
@@ -68,7 +57,11 @@ const handlePinch = (cursorPosition: Point): void => {
     state.activeTool === 'pencil' ||
     state.activeTool === 'eraser' ||
     state.activeTool === 'rectangle' ||
+    state.activeTool === 'square' ||
     state.activeTool === 'circle' ||
+    state.activeTool === 'triangle' ||
+    state.activeTool === 'star' ||
+    state.activeTool === 'pentagon' ||
     state.activeTool === 'line'
   ) {
     // Start or continue drawing
@@ -76,6 +69,17 @@ const handlePinch = (cursorPosition: Point): void => {
       startDrawing(cursorPosition);
       isDrawingWithGesture = true;
     }
+  } else if (state.activeTool === 'select') {
+    // Handle selection
+    const obj = getObjectAtPoint(cursorPosition, 15);
+    if (obj) {
+      state.selectObject(obj.id);
+    } else {
+      state.deselectObject();
+    }
+  } else if (state.activeTool === 'text') {
+    // For text tool, we'll handle it in App.tsx since it needs to set state
+    console.log('Text tool pinch at', cursorPosition);
   }
 };
 
@@ -88,32 +92,6 @@ export const handleGestureReleased = (gesture: GestureResult, cursorPosition: Po
     finishDrawing(cursorPosition);
     isDrawingWithGesture = false;
   }
-};
-
-/**
- * Pointing up gesture = Open tool menu or select tool
- */
-const handlePointingUp = (cursorPosition: Point): void => {
-  console.log('Pointing up gesture detected at', cursorPosition);
-  // Could be used to show/hide toolbar
-};
-
-/**
- * Fist gesture = Undo
- */
-const handleFist = (): void => {
-  const state = useStore.getState();
-  state.undo();
-  console.log('Undo triggered by fist gesture');
-};
-
-/**
- * Open palm gesture = Redo or Clear
- */
-const handlePalmOpen = (): void => {
-  const state = useStore.getState();
-  state.redo();
-  console.log('Redo triggered by open palm gesture');
 };
 
 /**

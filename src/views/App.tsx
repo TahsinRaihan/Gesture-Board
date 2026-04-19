@@ -125,7 +125,9 @@ const App: React.FC = () => {
         console.log('Hand tracking initialized');
       } catch (error) {
         console.error('Failed to initialize hand tracking:', error);
-        state.setHandGestureEnabled(false);
+        // Don't disable, show error but keep enabled for retry
+        alert(`Hand tracking initialization failed: ${(error as Error).message || 'Unknown error'}. Please check camera permissions and try again.`);
+        // Keep enabled so user can retry by toggling
       }
     };
 
@@ -270,7 +272,9 @@ const App: React.FC = () => {
           const indexTip = getIndexFingerTip(handPose);
           if (indexTip) {
             // Apply air mouse smoothing and acceleration
-            const smoothedPos = processAirMouseCursor(indexTip);
+            const videoWidth = videoRef.current?.videoWidth || 1280;
+            const videoHeight = videoRef.current?.videoHeight || 720;
+            const smoothedPos = processAirMouseCursor(indexTip, videoWidth, videoHeight);
             state.setCursorPosition(smoothedPos);
           }
 
@@ -278,10 +282,45 @@ const App: React.FC = () => {
           const gesture = detectGestureSmoothed(handPose);
           state.setCurrentGesture(gesture);
 
-          // Handle gesture
-          if (gesture.type !== 'none') {
+          let uiClickHandled = false;
+
+          // Handle UI clicks with pinch gesture
+          if (gesture.type === 'pinch') {
+            // Check if cursor is over a UI element
+            const elementUnderCursor = document.elementFromPoint(state.cursorPosition.x, state.cursorPosition.y);
+            
+            if (elementUnderCursor && elementUnderCursor !== document.body && elementUnderCursor !== document.documentElement) {
+              // Check if it's a clickable element
+              const clickableElement = elementUnderCursor.closest('button, [role="button"], input, select, textarea, .toolbar-button, .color-swatch, .shape-button, .camera-toggle');
+              
+              if (clickableElement && !clickableElement.hasAttribute('data-hand-clicked')) {
+                // Simulate click on UI element
+                (clickableElement as HTMLElement).click();
+                clickableElement.setAttribute('data-hand-clicked', 'true');
+                
+                // Remove the attribute after a short delay to allow repeated clicks
+                setTimeout(() => {
+                  clickableElement.removeAttribute('data-hand-clicked');
+                }, 500);
+                
+                console.log('Hand click on UI element:', clickableElement);
+                uiClickHandled = true;
+              }
+            } else if (state.activeTool === 'text') {
+              // Handle text tool on canvas
+              setTextInput({
+                isVisible: true,
+                x: state.cursorPosition.x,
+                y: state.cursorPosition.y,
+              });
+              uiClickHandled = true;
+            }
+          }
+
+          // Handle gesture for drawing (only if not UI click)
+          if (gesture.type !== 'none' && !uiClickHandled) {
             handleGesture(gesture, state.cursorPosition);
-          } else {
+          } else if (gesture.type === 'none') {
             // If no gesture detected but was drawing, might have released
             handleGestureReleased(gesture, state.cursorPosition);
           }
@@ -311,7 +350,7 @@ const App: React.FC = () => {
       // Draw transparent mode overlay and hand landmarks when tracking
       if (state.isHandGestureEnabled) {
         const handDetected = handPose !== null;
-        drawTransparentMode(true, handDetected);
+        drawTransparentMode(true, handDetected, true);
         
         if (handPose) {
           drawHandLandmarks(handPose);
@@ -361,7 +400,7 @@ const App: React.FC = () => {
         ref={canvasRef} 
         className="main-canvas"
         style={{
-          backgroundColor: state.theme === 'light' ? '#ffffff' : '#0f172a',
+          backgroundColor: state.isHandGestureEnabled ? 'transparent' : (state.theme === 'light' ? '#ffffff' : '#0f172a'),
           transform: `scale(${zoom}) translate(${panX}px, ${panY}px)`,
           transformOrigin: '0 0',
           cursor: isDraggingPanel === 'pan' ? 'grab' : 'crosshair',
@@ -372,7 +411,17 @@ const App: React.FC = () => {
         <video
           ref={videoRef}
           className="camera-feed"
-          style={{ display: 'none' }}
+          style={{
+            display: 'block',
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            width: '200px',
+            height: '150px',
+            border: '2px solid #00FF00',
+            borderRadius: '8px',
+            zIndex: 1000,
+          }}
         />
       )}
 

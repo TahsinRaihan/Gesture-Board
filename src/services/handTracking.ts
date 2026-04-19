@@ -28,7 +28,8 @@ export const initializeHandTracking = async (
 
     handDetector = await HandLandmarker.createFromOptions(wasmLoaderPath, {
       baseOptions: {
-        modelAssetPath: `${HAND_TRACKING_CONFIG.MODEL_ASSET_PATH}/hand_landmarker.task`,
+        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+        delegate: "GPU"
       },
       runningMode: 'VIDEO',
       numHands: 1,
