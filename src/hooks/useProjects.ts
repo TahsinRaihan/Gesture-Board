@@ -10,40 +10,58 @@ export interface Project {
   updated_at: string
   owner_id: string
   created_at: string
+  deleted_at?: string | null
 }
 
 const PROJECTS_STORAGE_KEY = 'gesture-board-projects'
+const TRASH_STORAGE_KEY = 'gesture-board-trash-projects'
+
+const readProjects = (storageKey: string): Project[] => {
+  try {
+    const stored = localStorage.getItem(storageKey)
+    return stored ? (JSON.parse(stored) as Project[]) : []
+  } catch {
+    return []
+  }
+}
+
+const writeProjects = (storageKey: string, projects: Project[]): void => {
+  localStorage.setItem(storageKey, JSON.stringify(projects))
+}
+
+const sortProjects = (projects: Project[]): Project[] =>
+  [...projects].sort((left, right) => new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime())
 
 export const useProjects = () => {
   const [projects, setProjects] = useState<Project[]>([])
+  const [trashedProjects, setTrashedProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
 
   const fetchProjects = async () => {
     if (!user) {
+      setProjects([])
+      setTrashedProjects([])
       setLoading(false)
       return
     }
 
     try {
       setLoading(true)
-      // Get all projects from localStorage
-      const stored = localStorage.getItem(PROJECTS_STORAGE_KEY)
-      const allProjects = stored ? JSON.parse(stored) : []
-      
-      // Filter projects owned by current user
-      const userProjects = allProjects
-        .filter((p: Project) => p.owner_id === user.id)
-        .sort((a: Project, b: Project) => 
-          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-        )
-      
-      setProjects(userProjects)
+      const activeProjects = readProjects(PROJECTS_STORAGE_KEY)
+        .filter((project) => project.owner_id === user.id && !project.deleted_at)
+
+      const deletedProjects = readProjects(TRASH_STORAGE_KEY)
+        .filter((project) => project.owner_id === user.id)
+
+      setProjects(sortProjects(activeProjects))
+      setTrashedProjects(sortProjects(deletedProjects))
       setError(null)
     } catch (err) {
       setError('Failed to fetch projects')
       setProjects([])
+      setTrashedProjects([])
     } finally {
       setLoading(false)
     }
@@ -63,16 +81,10 @@ export const useProjects = () => {
         updated_at: now,
       }
 
-      // Get existing projects
-      const stored = localStorage.getItem(PROJECTS_STORAGE_KEY)
-      const allProjects = stored ? JSON.parse(stored) : []
-      
-      // Add new project
-      allProjects.push(newProject)
-      localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(allProjects))
+      const existingProjects = readProjects(PROJECTS_STORAGE_KEY)
+      writeProjects(PROJECTS_STORAGE_KEY, [newProject, ...existingProjects])
 
-      // Update local state
-      setProjects(prev => [newProject, ...prev])
+      setProjects((prev) => sortProjects([newProject, ...prev]))
       setError(null)
       
       return newProject
@@ -84,22 +96,23 @@ export const useProjects = () => {
 
   const updateProject = async (id: string, updates: Partial<Project>) => {
     try {
-      const stored = localStorage.getItem(PROJECTS_STORAGE_KEY)
-      const allProjects = stored ? JSON.parse(stored) : []
-      
-      const updatedProjects = allProjects.map((p: Project) => 
-        p.id === id 
-          ? { ...p, ...updates, updated_at: new Date().toISOString() }
-          : p
+      const stored = readProjects(PROJECTS_STORAGE_KEY)
+      const updatedAt = new Date().toISOString()
+      const updatedProjects = stored.map((project: Project) => 
+        project.id === id 
+          ? { ...project, ...updates, updated_at: updatedAt }
+          : project
       )
       
-      localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects))
+      writeProjects(PROJECTS_STORAGE_KEY, updatedProjects)
       
-      setProjects(prev => prev.map(p => 
-        p.id === id 
-          ? { ...p, ...updates, updated_at: new Date().toISOString() }
-          : p
-      ))
+      setProjects((prev) =>
+        sortProjects(
+          prev.map((project) =>
+            project.id === id ? { ...project, ...updates, updated_at: updatedAt } : project
+          )
+        )
+      )
       
       return updatedProjects.find((p: Project) => p.id === id)
     } catch (err) {
@@ -110,16 +123,84 @@ export const useProjects = () => {
 
   const deleteProject = async (id: string) => {
     try {
-      const stored = localStorage.getItem(PROJECTS_STORAGE_KEY)
-      const allProjects = stored ? JSON.parse(stored) : []
-      
-      const filtered = allProjects.filter((p: Project) => p.id !== id)
-      localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(filtered))
-      
-      setProjects(prev => prev.filter(p => p.id !== id))
+      const now = new Date().toISOString()
+      const activeProjects = readProjects(PROJECTS_STORAGE_KEY)
+      const trashProjects = readProjects(TRASH_STORAGE_KEY)
+      const projectToDelete = activeProjects.find((project) => project.id === id)
+
+      if (!projectToDelete) {
+        return null
+      }
+
+      const trashedProject = { ...projectToDelete, deleted_at: now, updated_at: now }
+
+      writeProjects(
+        PROJECTS_STORAGE_KEY,
+        activeProjects.filter((project) => project.id !== id)
+      )
+      writeProjects(
+        TRASH_STORAGE_KEY,
+        [trashedProject, ...trashProjects.filter((project) => project.id !== id)]
+      )
+
+      setProjects((prev) => prev.filter((project) => project.id !== id))
+      setTrashedProjects((prev) => sortProjects([trashedProject, ...prev.filter((project) => project.id !== id)]))
       setError(null)
+      return trashedProject
     } catch (err) {
       setError('Failed to delete project')
+      return null
+    }
+  }
+
+  const restoreProject = async (id: string) => {
+    try {
+      const now = new Date().toISOString()
+      const activeProjects = readProjects(PROJECTS_STORAGE_KEY)
+      const trashProjects = readProjects(TRASH_STORAGE_KEY)
+      const projectToRestore = trashProjects.find((project) => project.id === id)
+
+      if (!projectToRestore) {
+        return null
+      }
+
+      const restoredProject = {
+        ...projectToRestore,
+        deleted_at: null,
+        updated_at: now,
+      }
+
+      writeProjects(
+        TRASH_STORAGE_KEY,
+        trashProjects.filter((project) => project.id !== id)
+      )
+      writeProjects(
+        PROJECTS_STORAGE_KEY,
+        [restoredProject, ...activeProjects.filter((project) => project.id !== id)]
+      )
+
+      setTrashedProjects((prev) => prev.filter((project) => project.id !== id))
+      setProjects((prev) => sortProjects([restoredProject, ...prev.filter((project) => project.id !== id)]))
+      setError(null)
+      return restoredProject
+    } catch (err) {
+      setError('Failed to restore project')
+      return null
+    }
+  }
+
+  const permanentlyDeleteProject = async (id: string) => {
+    try {
+      const trashProjects = readProjects(TRASH_STORAGE_KEY)
+      writeProjects(
+        TRASH_STORAGE_KEY,
+        trashProjects.filter((project) => project.id !== id)
+      )
+
+      setTrashedProjects((prev) => prev.filter((project) => project.id !== id))
+      setError(null)
+    } catch (err) {
+      setError('Failed to permanently delete project')
     }
   }
 
@@ -129,11 +210,14 @@ export const useProjects = () => {
 
   return {
     projects,
+    trashedProjects,
     loading,
     error,
     createProject,
     updateProject,
     deleteProject,
+    restoreProject,
+    permanentlyDeleteProject,
     refetch: fetchProjects,
   }
 }

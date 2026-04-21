@@ -547,30 +547,36 @@ const BoardWorkspace: React.FC = () => {
 
       {/* HEADER - Z: 100 */}
       <div
-        className="fixed top-0 left-0 right-0 h-20 bg-gradient-to-b from-slate-900 to-slate-800 border-b border-white/10 px-6 py-4 flex items-center justify-between"
+        className="fixed top-0 left-0 right-0 h-20 bg-gradient-to-b from-slate-950/95 via-slate-900/90 to-slate-900/85 border-b border-white/10 px-6 py-4 flex items-center justify-between"
         style={{
           zIndex: 100,
           backdropFilter: 'blur(10px)',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          boxShadow: '0 12px 30px rgba(0,0,0,0.24)',
         }}
       >
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/dashboard')}
-            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white"
+            className="p-2 hover:bg-white/10 rounded-xl transition-colors text-white"
             title="Back to Dashboard"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div>
-            <h1 className="text-xl font-bold text-white">{project.title}</h1>
-            <p className="text-xs text-gray-400">Last edited {new Date(project.updated_at).toLocaleDateString()}</p>
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 via-blue-500 to-indigo-600 text-sm font-black text-white shadow-xl shadow-blue-500/20">
+              GB
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-400">Gesture Board</p>
+              <h1 className="text-xl font-bold text-white">{project.title}</h1>
+              <p className="text-xs text-slate-400">Last edited {new Date(project.updated_at).toLocaleDateString()}</p>
+            </div>
           </div>
         </div>
 
         <button
           onClick={handleSave}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+          className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-white shadow-lg shadow-blue-600/20 transition-all hover:-translate-y-0.5 hover:bg-blue-500 hover:shadow-xl"
         >
           <Save className="w-4 h-4" />
           Save Project
@@ -587,12 +593,12 @@ const BoardWorkspace: React.FC = () => {
               window.prompt('Copy this board link to share with collaborators:', shareUrl)
             }
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+          className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-white shadow-lg shadow-emerald-600/20 transition-all hover:-translate-y-0.5 hover:bg-emerald-500 hover:shadow-xl"
         >
           <UserPlus className="w-4 h-4" />
           Invite Collaborators
           {collaborationService.isActive() && (
-            <span className="ml-2 px-2 py-1 bg-green-500 text-xs rounded-full">
+            <span className="ml-2 rounded-full bg-emerald-500 px-2 py-1 text-xs">
               {collaborationService.getOnlineUsers().length} online
             </span>
           )}
@@ -601,22 +607,22 @@ const BoardWorkspace: React.FC = () => {
 
       {/* TOOLBAR - Z: 100 (LEFT SIDE) */}
       <div
-        className="absolute w-72 bg-slate-800/95 backdrop-blur-md border border-white/10 rounded-xl overflow-y-auto max-h-[calc(100vh-150px)]"
+        className="absolute w-72 overflow-y-auto rounded-2xl border border-white/10 bg-slate-900/90 backdrop-blur-xl max-h-[calc(100vh-150px)]"
         style={{
           left: toolbarPosition.x,
           top: toolbarPosition.y,
           zIndex: 100,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+          boxShadow: '0 24px 50px rgba(0,0,0,0.28)',
           pointerEvents: 'none', // Allow events to pass through to canvas
         }}
       >
         <div className="panel-drag-handle" data-panel="toolbar" style={{ pointerEvents: 'auto' }}> {/* Enable events for content */}
-          <div className="flex items-center justify-between p-2 border-b border-white/10 cursor-move">
-            <span className="text-xs text-gray-400 font-medium">Toolbar</span>
+          <div className="flex items-center justify-between border-b border-white/10 p-3 cursor-move">
+            <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Toolbar</span>
             <div className="flex gap-1">
-              <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
-              <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
-              <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
+              <div className="w-1 h-1 rounded-full bg-slate-500"></div>
+              <div className="w-1 h-1 rounded-full bg-slate-500"></div>
+              <div className="w-1 h-1 rounded-full bg-slate-500"></div>
             </div>
           </div>
           <Toolbar />
@@ -625,22 +631,22 @@ const BoardWorkspace: React.FC = () => {
 
       {/* COLOR PICKER & LAYERS - Z: 100 (RIGHT SIDE) */}
       <div
-        className="absolute w-80 bg-slate-800/95 backdrop-blur-md border border-white/10 rounded-xl overflow-y-auto max-h-[calc(100vh-150px)]"
+        className="absolute w-80 overflow-y-auto rounded-2xl border border-white/10 bg-slate-900/90 backdrop-blur-xl max-h-[calc(100vh-150px)]"
         style={{
           left: colorPickerPosition.x,
           top: colorPickerPosition.y,
           zIndex: 100,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+          boxShadow: '0 24px 50px rgba(0,0,0,0.28)',
           pointerEvents: 'none', // Allow events to pass through to canvas
         }}
       >
         <div className="panel-drag-handle" data-panel="colorPicker" style={{ pointerEvents: 'auto' }}> {/* Enable events for content */}
-          <div className="flex items-center justify-between p-2 border-b border-white/10 cursor-move">
-            <span className="text-xs text-gray-400 font-medium">Tools</span>
+          <div className="flex items-center justify-between border-b border-white/10 p-3 cursor-move">
+            <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Tools</span>
             <div className="flex gap-1">
-              <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
-              <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
-              <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
+              <div className="w-1 h-1 rounded-full bg-slate-500"></div>
+              <div className="w-1 h-1 rounded-full bg-slate-500"></div>
+              <div className="w-1 h-1 rounded-full bg-slate-500"></div>
             </div>
           </div>
           <div className="border-b border-white/10 p-4">
@@ -667,10 +673,9 @@ const BoardWorkspace: React.FC = () => {
             state.setHandGestureEnabled(false)
             stopWebcam()
           }}
-          className="fixed top-24 left-6 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
+          className="fixed top-24 left-6 rounded-xl bg-red-600 px-4 py-2 text-white font-semibold shadow-lg shadow-red-600/20 transition-all hover:-translate-y-0.5 hover:bg-red-500 hover:shadow-xl"
           style={{
             zIndex: 100,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
             pointerEvents: 'auto',
           }}
         >
@@ -681,10 +686,9 @@ const BoardWorkspace: React.FC = () => {
       {/* GESTURE INDICATOR - Z: 100 (BOTTOM RIGHT) */}
       {state.isHandGestureEnabled && (
         <div
-          className="fixed bottom-6 right-6 bg-slate-800/95 backdrop-blur-md border border-white/10 text-white px-4 py-2 rounded-lg text-sm font-mono"
+          className="fixed bottom-6 right-6 rounded-xl border border-white/10 bg-slate-900/90 px-4 py-2 text-sm font-mono text-white backdrop-blur-xl shadow-2xl shadow-black/20"
           style={{
             zIndex: 100,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
             pointerEvents: 'auto',
           }}
         >

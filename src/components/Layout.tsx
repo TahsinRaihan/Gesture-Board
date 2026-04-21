@@ -30,16 +30,19 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       {/* Sidebar */}
-      <div className="fixed inset-y-0 left-0 w-64 bg-slate-900/80 backdrop-blur-xl border-r border-white/10 m-4 rounded-2xl overflow-hidden">
+      <div className="fixed inset-y-0 left-0 m-4 w-64 overflow-hidden rounded-[28px] border border-white/10 bg-slate-900/85 backdrop-blur-xl shadow-2xl shadow-black/20">
         <div className="flex flex-col h-full p-6">
           {/* Logo */}
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
+          <div className="mb-8 flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 via-blue-500 to-indigo-600 text-sm font-black text-white shadow-lg shadow-blue-500/20">
               GB
             </div>
-            <h1 className="text-2xl font-bold text-white">Gesture Board</h1>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-400">Gesture Board</p>
+              <h1 className="text-2xl font-bold tracking-tight text-white">Workspace</h1>
+            </div>
           </div>
 
           {/* Navigation */}
@@ -52,8 +55,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   to={item.href}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
                     isActive
-                      ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 shadow-md'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                      ? 'bg-blue-600/20 text-blue-300 border border-blue-500/30 shadow-lg shadow-blue-500/10'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60 hover:shadow-md'
                   }`}
                 >
                   <item.icon className="w-5 h-5" />
@@ -91,7 +94,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Main content */}
       <div className="ml-72 mr-80 mt-4 mb-4">
         {/* Top bar */}
-        <div className="glass rounded-2xl p-4 mb-6 border border-white/10">
+        <div className="glass rounded-2xl p-4 mb-6 border border-white/10 shadow-xl shadow-black/10">
           <div className="flex items-center justify-between gap-4">
             <div className="flex-1 max-w-md">
               <div className="relative">
@@ -112,7 +115,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
 
         {/* Page content */}
-        <div className="glass rounded-2xl p-6 border border-white/10">
+        <div className="glass rounded-2xl p-6 border border-white/10 shadow-xl shadow-black/10">
           {children}
         </div>
       </div>

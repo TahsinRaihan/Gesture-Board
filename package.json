@@ -13,6 +13,7 @@
     "@mediapipe/tasks-vision": "^0.10.0",
     "@supabase/supabase-js": "^2.103.3",
     "fabric": "^5.3.0",
+    "jspdf": "^4.2.1",
     "lucide-react": "^0.263.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

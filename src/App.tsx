@@ -5,6 +5,7 @@ import Signup from './components/Signup'
 import Dashboard from './components/Dashboard'
 import BoardWorkspace from './components/BoardWorkspace'
 import Friends from './components/Friends'
+import Trash from './components/Trash'
 import ProtectedRoute from './components/ProtectedRoute'
 
 const App: React.FC = () => {
@@ -97,6 +98,14 @@ const App: React.FC = () => {
         element={
           <ProtectedRoute>
             <Friends />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/trash"
+        element={
+          <ProtectedRoute>
+            <Trash />
           </ProtectedRoute>
         }
       />
