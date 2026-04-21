@@ -14,6 +14,7 @@ export type ToolType =
   | 'text'
   | 'eraser'
   | 'select'
+  | 'drag'
   | 'color-picker';
 
 export interface Point {

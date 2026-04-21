@@ -6,6 +6,7 @@ import { ToolType } from '@/types';
 
 export const TOOL_TYPES: ToolType[] = [
   'select',
+  'drag',
   'pencil',
   'rectangle',
   'circle',
@@ -40,8 +41,8 @@ export const CANVAS_HEIGHT = 1080;
 export const HAND_TRACKING_CONFIG = {
   MODEL_ASSET_PATH:
     'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm',
-  DETECTION_CONFIDENCE: 0.5,
-  TRACKING_CONFIDENCE: 0.5,
+  DETECTION_CONFIDENCE: 0.3,
+  TRACKING_CONFIDENCE: 0.3,
   RUN_MODE: 'VIDEO' as const,
 };
 

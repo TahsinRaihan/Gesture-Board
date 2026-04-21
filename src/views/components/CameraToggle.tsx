@@ -20,9 +20,10 @@ const CameraToggle: React.FC = () => {
         state.setHandGestureEnabled(false);
       } else {
         // Request camera permission
-        await navigator.mediaDevices.getUserMedia({
+        const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: { ideal: 1280 }, height: { ideal: 720 } },
         });
+        stream.getTracks().forEach((track) => track.stop());
         state.setHandGestureEnabled(true);
       }
     } catch (error: any) {

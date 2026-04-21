@@ -6,6 +6,7 @@
 import { useStore } from '@/store/store';
 import { Point, DrawingObject } from '@/types';
 import { createDrawingObject } from '@/utils/helpers';
+import { collaborationService } from '@/services/collaborationService';
 
 let isDrawing = false;
 let currentPath: Point[] = [];
@@ -42,6 +43,11 @@ export const startDrawing = (point: Point): void => {
     
     state.addObjectToLayer(drawingObject);
     currentDrawingObjectId = drawingObject.id;
+
+    // Broadcast to collaborators
+    if (collaborationService.isActive()) {
+      collaborationService.addObject(drawingObject);
+    }
   } 
   // For shape tools, also create object immediately for preview
   else if (['rectangle', 'square', 'circle', 'triangle', 'star', 'pentagon', 'line'].includes(state.activeTool)) {
@@ -55,6 +61,11 @@ export const startDrawing = (point: Point): void => {
     
     state.addObjectToLayer(drawingObject);
     currentDrawingObjectId = drawingObject.id;
+
+    // Broadcast to collaborators
+    if (collaborationService.isActive()) {
+      collaborationService.addObject(drawingObject);
+    }
   }
 
   state.startDrawing();
@@ -77,6 +88,13 @@ export const continueDrawing = (point: Point): void => {
       state.updateObjectInLayer(currentDrawingObjectId, {
         points: [...currentPath],
       });
+
+      // Broadcast real-time updates for freehand drawing
+      if (collaborationService.isActive()) {
+        collaborationService.updateObject(currentDrawingObjectId, {
+          points: [...currentPath],
+        });
+      }
     }
   } 
   // For shape tools, show preview while dragging
@@ -85,6 +103,13 @@ export const continueDrawing = (point: Point): void => {
       state.updateObjectInLayer(currentDrawingObjectId, {
         points: [startPoint, point],
       });
+
+      // Broadcast real-time updates for shape preview
+      if (collaborationService.isActive()) {
+        collaborationService.updateObject(currentDrawingObjectId, {
+          points: [startPoint, point],
+        });
+      }
     }
   }
 };
@@ -162,6 +187,11 @@ export const addText = (text: string, position: Point, fontSize: number = 16): v
 
   state.addObjectToLayer(textObject);
   state.pushHistory();
+
+  // Broadcast to collaborators
+  if (collaborationService.isActive()) {
+    collaborationService.addObject(textObject);
+  }
 };
 
 /**

@@ -17,11 +17,19 @@ export const initializeHandTracking = async (
   videoElement: HTMLVideoElement
 ): Promise<void> => {
   try {
+    console.log('Initializing hand tracking...');
+
+    // Check if MediaPipe is available
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('WebRTC not supported');
+    }
+
     // Dynamically import MediaPipe tasks
     const vision = await import('@mediapipe/tasks-vision');
 
     const { HandLandmarker, FilesetResolver } = vision;
 
+    console.log('Loading MediaPipe model...');
     const wasmLoaderPath = await FilesetResolver.forVisionTasks(
       HAND_TRACKING_CONFIG.MODEL_ASSET_PATH
     );
@@ -29,7 +37,7 @@ export const initializeHandTracking = async (
     handDetector = await HandLandmarker.createFromOptions(wasmLoaderPath, {
       baseOptions: {
         modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
-        delegate: "GPU"
+        delegate: "CPU" // Changed from GPU to CPU for better compatibility
       },
       runningMode: 'VIDEO',
       numHands: 1,
@@ -39,12 +47,20 @@ export const initializeHandTracking = async (
     });
 
     video = videoElement;
+    console.log('Hand tracking initialized successfully');
 
     // Request camera permission and start streaming
     await startWebcam();
   } catch (error) {
     console.error('Failed to initialize hand tracking:', error);
-    throw error;
+    // Try fallback initialization
+    try {
+      console.log('Trying fallback initialization...');
+      await initializeFallbackHandTracking(videoElement);
+    } catch (fallbackError) {
+      console.error('Fallback hand tracking also failed:', fallbackError);
+      throw error;
+    }
   }
 };
 
@@ -52,17 +68,54 @@ export const initializeHandTracking = async (
  * Start webcam stream
  */
 const startWebcam = async (): Promise<void> => {
-  const stream = await navigator.mediaDevices.getUserMedia({
-    video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-    audio: false,
-  });
+  try {
+    console.log('Requesting camera access...');
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        facingMode: 'user' // Use front camera
+      },
+      audio: false,
+    });
 
-  if (video) {
-    video.srcObject = stream;
-    video.onloadedmetadata = () => {
-      video!.play();
-      webcamRunning = true;
-    };
+    if (video) {
+      video.srcObject = stream;
+      video.onloadedmetadata = () => {
+        console.log('Video metadata loaded, starting playback...');
+        video!.play().then(() => {
+          webcamRunning = true;
+          console.log('Webcam started successfully');
+        }).catch((playError) => {
+          console.error('Failed to play video:', playError);
+          throw playError;
+        });
+      };
+
+      // Wait for video to be ready
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Video ready timeout'));
+        }, 5000);
+
+        if (video) {
+          video.oncanplay = () => {
+            clearTimeout(timeout);
+            resolve();
+          };
+
+          video.onerror = () => {
+            clearTimeout(timeout);
+            reject(new Error('Video error'));
+          };
+        } else {
+          reject(new Error('Video element not available'));
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Failed to start webcam:', error);
+    throw error;
   }
 };
 
@@ -87,7 +140,9 @@ export const detectHandPose = (
     !handDetector ||
     !video ||
     !webcamRunning ||
-    video.readyState !== video.HAVE_ENOUGH_DATA
+    video.readyState < video.HAVE_CURRENT_DATA ||
+    video.videoWidth === 0 ||
+    video.videoHeight === 0
   ) {
     return null;
   }
@@ -171,4 +226,38 @@ export const cleanupHandTracking = (): void => {
  */
 export const isHandTrackingReady = (): boolean => {
   return handDetector !== null && webcamRunning;
+};
+
+/**
+ * Fallback hand tracking initialization with different settings
+ */
+const initializeFallbackHandTracking = async (
+  videoElement: HTMLVideoElement
+): Promise<void> => {
+  try {
+    const vision = await import('@mediapipe/tasks-vision');
+    const { HandLandmarker, FilesetResolver } = vision;
+
+    const wasmLoaderPath = await FilesetResolver.forVisionTasks(
+      HAND_TRACKING_CONFIG.MODEL_ASSET_PATH
+    );
+
+    handDetector = await HandLandmarker.createFromOptions(wasmLoaderPath, {
+      baseOptions: {
+        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+        delegate: "CPU"
+      },
+      runningMode: 'VIDEO',
+      numHands: 1,
+      minHandDetectionConfidence: 0.3, // Lower threshold
+      minHandPresenceConfidence: 0.3,
+      minTrackingConfidence: 0.3,
+    });
+
+    video = videoElement;
+    await startWebcam();
+  } catch (error) {
+    console.error('Fallback initialization failed:', error);
+    throw error;
+  }
 };

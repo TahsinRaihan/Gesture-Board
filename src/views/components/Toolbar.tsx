@@ -16,6 +16,7 @@ import {
   Sun,
   Moon,
   MousePointer,
+  Move,
 } from 'lucide-react';
 import { useStore } from '@/store/store';
 import { exportCanvasAsImage } from '@/services/canvasRenderer';
@@ -30,6 +31,7 @@ const Toolbar: React.FC = () => {
 
   const basicTools = [
     { id: 'select', label: 'Select', icon: MousePointer },
+    { id: 'drag', label: 'Drag', icon: Move },
     { id: 'pencil', label: 'Pencil', icon: Pencil },
     { id: 'text', label: 'Text', icon: Type },
     { id: 'eraser', label: 'Eraser', icon: Eraser },

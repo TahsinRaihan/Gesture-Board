@@ -115,7 +115,7 @@ export const clearCanvasStorage = (): void => {
 let autoSaveInterval: NodeJS.Timeout | null = null;
 
 export const startAutoSave = (
-  layers: CanvasLayer[],
+  getLayers: () => CanvasLayer[],
   interval: number = 10000
 ): void => {
   if (autoSaveInterval) {
@@ -123,6 +123,7 @@ export const startAutoSave = (
   }
 
   autoSaveInterval = setInterval(() => {
+    const layers = getLayers();
     saveCanvasToLocalStorage(layers);
   }, interval);
 };

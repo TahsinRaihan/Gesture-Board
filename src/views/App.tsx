@@ -20,7 +20,7 @@ import {
 import { startAutoSave, stopAutoSave, loadCanvasFromLocalStorage } from '@/services/storageService';
 import { handleGesture, handleGestureReleased } from '@/controllers/gestureController';
 import { startDrawing, continueDrawing, finishDrawing, addText, getObjectAtPoint, startDraggingObject, dragObject, stopDraggingObject } from '@/controllers/drawingController';
-import { processAirMouseCursor } from '@/controllers/cursorController';
+// import { processAirMouseCursor } from '@/controllers/cursorController';
 import {
   getSelectionBox,
   updateBoxSelectionPoint,
@@ -30,7 +30,6 @@ import ColorPicker from '@/views/components/ColorPicker';
 import LayersPanel from '@/views/components/LayersPanel';
 import CameraToggle from '@/views/components/CameraToggle';
 import TextInputBox from '@/views/components/TextInputBox';
-import './App.css';
 
 interface TextInputState {
   isVisible: boolean;
@@ -273,16 +272,16 @@ const App: React.FC = () => {
           const indexTip = getIndexFingerTip(handPose);
           if (indexTip) {
             // Apply air mouse smoothing and acceleration
-            const videoWidth = videoRef.current?.videoWidth || 1280;
-            const videoHeight = videoRef.current?.videoHeight || 720;
-            const smoothedPos = processAirMouseCursor(indexTip, videoWidth, videoHeight);
-            state.setCursorPosition(smoothedPos);
+            // const videoWidth = videoRef.current?.videoWidth || 1280;
+            // const videoHeight = videoRef.current?.videoHeight || 720;
+            // const smoothedPos = processAirMouseCursor(indexTip, videoWidth, videoHeight);
+            // state.setCursorPosition(smoothedPos);
               // Transform screen coordinates to canvas coordinates (accounting for zoom and pan)
-              const canvasPoint = {
-                x: (smoothedPos.x - panX * window.innerWidth) / zoom,
-                y: (smoothedPos.y - panY * window.innerHeight) / zoom,
-              };
-              state.setCanvasCursorPosition(canvasPoint);          }
+              // const canvasPoint = {
+              //   x: (smoothedPos.x - panX * window.innerWidth) / zoom,
+              //   y: (smoothedPos.y - panY * window.innerHeight) / zoom,
+              // };
+              // state.setCanvasCursorPosition(canvasPoint);          }
 
           // Detect gesture
           const gesture = detectGestureSmoothed(handPose);
@@ -298,19 +297,19 @@ const App: React.FC = () => {
             
             // Handle hover effect
             if (lastHoveredElement && lastHoveredElement !== elementUnderCursor) {
-              lastHoveredElement.classList.remove('virtual-hover');
+              lastHoveredElement.classList.remove('is-hovered');
             }
             if (elementUnderCursor && elementUnderCursor !== canvasRef.current && elementUnderCursor !== videoRef.current && elementUnderCursor !== document.body) {
               const clickable = elementUnderCursor.closest('button, [role="button"], input, select, textarea, .toolbar-button, .color-button, .shape-option, .camera-toggle, .toggle-custom-button');
               if (clickable) {
-                clickable.classList.add('virtual-hover');
+                clickable.classList.add('is-hovered');
                 setLastHoveredElement(clickable);
               } else {
                 setLastHoveredElement(null);
               }
             } else {
               if (lastHoveredElement) {
-                lastHoveredElement.classList.remove('virtual-hover');
+                lastHoveredElement.classList.remove('is-hovered');
                 setLastHoveredElement(null);
               }
             }
@@ -320,8 +319,12 @@ const App: React.FC = () => {
               const clickableElement = elementUnderCursor.closest('button, .toolbar-button, .color-button, .shape-option, .camera-toggle, .toggle-custom-button');
               
               if (clickableElement && !clickableElement.hasAttribute('data-hand-clicked')) {
-                // Simulate click on UI element
-                (clickableElement as HTMLElement).click();
+                // Dispatch real PointerEvent for proper UI interaction
+                clickableElement.dispatchEvent(new PointerEvent('click', { 
+                  bubbles: true, 
+                  cancelable: true, 
+                  view: window 
+                }));
                 clickableElement.setAttribute('data-hand-clicked', 'true');
                 
                 // Remove the attribute after a short delay to allow repeated clicks
@@ -408,7 +411,7 @@ const App: React.FC = () => {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [appReady, state.layers, state.isHandGestureEnabled, state.currentGesture, state.selectedObjectIds, state.handPose]);
+  }, [appReady]);
 
   if (!appReady) {
     return <div className="loading">Loading Hand Figma...</div>;
@@ -428,7 +431,7 @@ const App: React.FC = () => {
         style={{
           backgroundColor: state.isHandGestureEnabled ? 'transparent' : (state.theme === 'light' ? '#ffffff' : '#0f172a'),
           transform: `scale(${zoom}) translate(${panX}px, ${panY}px)`,
-          pointerEvents: state.isHandGestureEnabled ? 'none' : 'auto',
+          pointerEvents: (state.isHandGestureEnabled ? 'none' : 'auto') as any,
           transformOrigin: '0 0',
           cursor: isDraggingPanel === 'pan' ? 'grab' : 'crosshair',
         }}
@@ -449,7 +452,7 @@ const App: React.FC = () => {
             borderRadius: '8px',
             zIndex: 1000,
             transform: 'scaleX(-1)', // Flip for natural self-view
-            pointerEvents: 'none', // Allow elementFromPoint to see through
+            pointerEvents: 'none' as any, // Critical: allow elementFromPoint to see through
           }}
         />
       )}
@@ -540,7 +543,7 @@ const App: React.FC = () => {
           className="close-gesture-button"
           onClick={() => {
             if (lastHoveredElement) {
-              lastHoveredElement.classList.remove('virtual-hover');
+              lastHoveredElement.classList.remove('is-hovered');
               setLastHoveredElement(null);
             }
             state.setHandGestureEnabled(false);

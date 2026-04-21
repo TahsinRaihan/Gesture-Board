@@ -10,6 +10,9 @@ import {
   continueDrawing,
   finishDrawing,
   getObjectAtPoint,
+  startDraggingObject,
+  dragObject,
+  stopDraggingObject,
 } from './drawingController';
 
 let lastGestureTime = 0;
@@ -18,6 +21,9 @@ const GESTURE_DEBOUNCE = 200; // ms
 let isDrawingWithGesture = false;
 let pinchHoldCounter = 0;
 const PINCH_HOLD_THRESHOLD = 3; // Frames to hold pinch state
+
+let isDraggingWithGesture = false;
+let draggingObjectId: string | null = null;
 
 export const handleGesture = (
   gesture: GestureResult,
@@ -91,6 +97,18 @@ const handlePinch = (cursorPosition: Point): void => {
       }
       isDrawingWithGesture = true; // Prevent repeated selections
     }
+  } else if (state.activeTool === 'drag') {
+    // Handle dragging - start or continue dragging
+    if (!isDraggingWithGesture) {
+      const obj = getObjectAtPoint(cursorPosition, 15);
+      if (obj) {
+        startDraggingObject(cursorPosition);
+        isDraggingWithGesture = true;
+        draggingObjectId = obj.id;
+      }
+    } else if (draggingObjectId) {
+      dragObject(cursorPosition, draggingObjectId);
+    }
   } else if (state.activeTool === 'text') {
     // For text tool, we'll handle it in App.tsx since it needs to set state
     console.log('Text tool pinch at', cursorPosition);
@@ -102,6 +120,13 @@ export const handleGestureReleased = (cursorPosition: Point): void => {
   if (isDrawingWithGesture) {
     finishDrawing(cursorPosition);
     isDrawingWithGesture = false;
+  }
+
+  // Stop dragging if we were dragging
+  if (isDraggingWithGesture && draggingObjectId) {
+    stopDraggingObject();
+    isDraggingWithGesture = false;
+    draggingObjectId = null;
   }
 };
 
@@ -115,6 +140,11 @@ export const updateCursorPosition = (position: Point): void => {
   // If actively drawing with pinch gesture, continue drawing
   if (isDrawingWithGesture && state.isDrawing) {
     continueDrawing(position);
+  }
+
+  // If actively dragging with pinch gesture, continue dragging
+  if (isDraggingWithGesture && draggingObjectId) {
+    dragObject(position, draggingObjectId);
   }
 };
 

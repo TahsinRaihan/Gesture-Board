@@ -357,9 +357,11 @@ export const useStore = create<State & Actions>((set) => ({
 
   // Batch operations
   setAllLayers: (layers: CanvasLayer[]) => {
+    const normalizedLayers = layers.length > 0 ? layers : [createLayer('Layer 1')];
+
     set({
-      layers,
-      activeLayerId: layers[0]?.id || '',
+      layers: normalizedLayers,
+      activeLayerId: normalizedLayers[0].id,
     });
   },
 }));

@@ -36,7 +36,7 @@ const resizeCanvas = (): void => {
 };
 
 /**
- * Clear the entire canvas
+ * Clear the entire canvas and draw dot grid background
  */
 export const clearCanvas = (): void => {
   if (!canvasContext || !canvas) return;
@@ -44,9 +44,23 @@ export const clearCanvas = (): void => {
   // Get the theme from the document
   const theme = document.documentElement.getAttribute('data-theme') || 'light';
   const backgroundColor = theme === 'dark' ? '#0f172a' : '#ffffff';
+  const dotColor = theme === 'dark' ? '#334155' : '#e2e8f0';
   
+  // Fill background
   canvasContext.fillStyle = backgroundColor;
   canvasContext.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Draw dot grid
+  const gridSize = 20; // Distance between dots
+  canvasContext.fillStyle = dotColor;
+  
+  for (let x = gridSize; x < canvas.width; x += gridSize) {
+    for (let y = gridSize; y < canvas.height; y += gridSize) {
+      canvasContext.beginPath();
+      canvasContext.arc(x, y, 1, 0, 2 * Math.PI);
+      canvasContext.fill();
+    }
+  }
 };
 
 /**
@@ -137,21 +151,15 @@ const drawFreehand = (points: Point[]): void => {
   canvasContext.beginPath();
   canvasContext.moveTo(smoothedPoints[0].x, smoothedPoints[0].y);
 
-  for (let i = 1; i < smoothedPoints.length - 1; i++) {
+  for (let i = 1; i < smoothedPoints.length; i++) {
+    const prev = smoothedPoints[i - 1];
     const current = smoothedPoints[i];
-    const next = smoothedPoints[i + 1];
     
-    // Use quadratic curve for smooth interpolation
-    const controlX = (current.x + next.x) / 2;
-    const controlY = (current.y + next.y) / 2;
+    // Use quadratic curve with previous point as control for smooth brush stroke
+    const midX = (prev.x + current.x) / 2;
+    const midY = (prev.y + current.y) / 2;
     
-    canvasContext.quadraticCurveTo(current.x, current.y, controlX, controlY);
-  }
-
-  // Draw the last segment
-  if (smoothedPoints.length > 1) {
-    const last = smoothedPoints[smoothedPoints.length - 1];
-    canvasContext.lineTo(last.x, last.y);
+    canvasContext.quadraticCurveTo(prev.x, prev.y, midX, midY);
   }
 
   canvasContext.stroke();

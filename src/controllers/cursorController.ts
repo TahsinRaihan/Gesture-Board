@@ -5,7 +5,7 @@
 
 import { Point } from '@/types';
 
-const CURSOR_SMOOTHING = 0.3; // Lower = less lag, more responsive
+const CURSOR_SMOOTHING = 0.5; // Balanced smoothing
 const ACCELERATION = 2.0; // Higher = more responsive to fast movements
 
 let lastCursorPos: Point = { x: 0, y: 0 };
@@ -15,17 +15,27 @@ let lastRawPos: Point = { x: 0, y: 0 };
  * Process raw hand position into smooth air mouse cursor
  * Applies smoothing, dead zone, and acceleration
  */
-export const processAirMouseCursor = (rawPosition: Point, videoWidth: number = 1280, videoHeight: number = 720): Point => {
-  // Map video coordinates to screen coordinates
-  const screenX = (rawPosition.x / videoWidth) * window.innerWidth;
-  const screenY = (rawPosition.y / videoHeight) * window.innerHeight;
+export const processAirMouseCursor = (rawPosition: Point, videoElement: HTMLVideoElement): Point => {
+  const videoRect = videoElement.getBoundingClientRect();
+  const videoWidth = videoElement.videoWidth || 1280;
+  const videoHeight = videoElement.videoHeight || 720;
   
-  const mappedPosition = { x: screenX, y: screenY };
+  // Map video coordinates to video element coordinates
+  // Since the video is mirrored (scaleX(-1)), we need to flip X
+  const videoX = ((videoWidth - rawPosition.x) / videoWidth) * videoRect.width + videoRect.left;
+  const videoY = (rawPosition.y / videoHeight) * videoRect.height + videoRect.top;
+  
+  const mappedPosition = { x: videoX, y: videoY };
 
   // Step 1: Calculate velocity for acceleration
   const deltaX = mappedPosition.x - lastRawPos.x;
   const deltaY = mappedPosition.y - lastRawPos.y;
   const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+  // Initialize lastCursorPos on first call
+  if (lastCursorPos.x === 0 && lastCursorPos.y === 0) {
+    lastCursorPos = mappedPosition;
+  }
 
   // Step 2: Apply smoothing (exponential moving average)
   let smoothed = {
