@@ -4,7 +4,7 @@
  */
 
 import { useStore } from '@/store/store';
-import { GestureResult, Point } from '@/types';
+import { GestureResult, Point, ToolType } from '@/types';
 import {
   startDrawing,
   continueDrawing,
@@ -15,8 +15,9 @@ import {
   stopDraggingObject,
 } from './drawingController';
 
-let lastGestureTime = 0;
-const GESTURE_DEBOUNCE = 200; // ms
+let lastDiscreteGestureTime = 0;
+let lastDiscreteGestureType: GestureResult['type'] = 'none';
+const GESTURE_DEBOUNCE = 180; // ms
 
 let isDrawingWithGesture = false;
 let pinchHoldCounter = 0;
@@ -25,12 +26,27 @@ const PINCH_HOLD_THRESHOLD = 3; // Frames to hold pinch state
 let isDraggingWithGesture = false;
 let draggingObjectId: string | null = null;
 
+const GESTURE_TOOL_SEQUENCE: ToolType[] = [
+  'select',
+  'drag',
+  'pencil',
+  'rectangle',
+  'square',
+  'circle',
+  'triangle',
+  'star',
+  'pentagon',
+  'line',
+  'text',
+  'eraser',
+  'color-picker',
+];
+
 export const handleGesture = (
   gesture: GestureResult,
   cursorPosition: Point
 ): void => {
   const state = useStore.getState();
-  const now = Date.now();
 
   if (!state.isHandGestureEnabled) return;
 
@@ -41,24 +57,43 @@ export const handleGesture = (
     pinchHoldCounter = Math.max(0, pinchHoldCounter - 1);
   }
 
-  // Use stable pinch state
-  const stablePinch = pinchHoldCounter > 0;
-
-  // Debounce clicks to prevent rapid-fire actions
-  if (now - lastGestureTime < GESTURE_DEBOUNCE) {
+  if (pinchHoldCounter > 0) {
+    handlePinch(cursorPosition);
     return;
   }
 
-  if (stablePinch) {
-    handlePinch(cursorPosition);
-  } else {
-    // Only release if pinch has been gone for a while
-    if (pinchHoldCounter === 0 && isDrawingWithGesture) {
-      handleGestureReleased(cursorPosition);
-    }
+  if (isDrawingWithGesture || isDraggingWithGesture) {
+    handleGestureReleased(cursorPosition);
   }
 
-  lastGestureTime = now;
+  if (gesture.type === 'none') {
+    lastDiscreteGestureType = 'none';
+    return;
+  }
+
+  const now = Date.now();
+  if (gesture.type === lastDiscreteGestureType || now - lastDiscreteGestureTime < GESTURE_DEBOUNCE) {
+    return;
+  }
+
+  lastDiscreteGestureType = gesture.type;
+  lastDiscreteGestureTime = now;
+
+  if (gesture.type === 'fist') {
+    state.undo();
+    return;
+  }
+
+  if (gesture.type === 'open') {
+    state.redo();
+    return;
+  }
+
+  if (gesture.type === 'pointing-up') {
+    const currentToolIndex = GESTURE_TOOL_SEQUENCE.indexOf(state.activeTool as ToolType);
+    const nextToolIndex = currentToolIndex >= 0 ? (currentToolIndex + 1) % GESTURE_TOOL_SEQUENCE.length : 0;
+    switchToolByGesture(nextToolIndex);
+  }
 };
 
 /**
@@ -128,6 +163,9 @@ export const handleGestureReleased = (cursorPosition: Point): void => {
     isDraggingWithGesture = false;
     draggingObjectId = null;
   }
+
+  pinchHoldCounter = 0;
+  lastDiscreteGestureType = 'none';
 };
 
 /**
@@ -153,19 +191,9 @@ export const updateCursorPosition = (position: Point): void => {
  * Can be triggered by specific multi-finger gestures
  */
 export const switchToolByGesture = (toolIndex: number): void => {
-  const tools = [
-    'select',
-    'pencil',
-    'rectangle',
-    'circle',
-    'line',
-    'eraser',
-    'color-picker',
-  ];
-
-  if (toolIndex >= 0 && toolIndex < tools.length) {
+  if (toolIndex >= 0 && toolIndex < GESTURE_TOOL_SEQUENCE.length) {
     const state = useStore.getState();
-    state.setTool(tools[toolIndex] as any);
+    state.setTool(GESTURE_TOOL_SEQUENCE[toolIndex]);
   }
 };
 
@@ -202,5 +230,9 @@ export const getIsDrawingWithGesture = (): boolean => {
  */
 export const resetGestureController = (): void => {
   isDrawingWithGesture = false;
-  lastGestureTime = 0;
+  lastDiscreteGestureTime = 0;
+  lastDiscreteGestureType = 'none';
+  pinchHoldCounter = 0;
+  isDraggingWithGesture = false;
+  draggingObjectId = null;
 };

@@ -80,17 +80,44 @@ const startWebcam = async (): Promise<void> => {
     });
 
     if (video) {
-      video.srcObject = stream;
-      video.onloadedmetadata = () => {
+      const activeVideo = video;
+      activeVideo.muted = true;
+      activeVideo.playsInline = true;
+      activeVideo.autoplay = true;
+
+      webcamRunning = true;
+
+      activeVideo.onloadedmetadata = () => {
         console.log('Video metadata loaded, starting playback...');
-        video!.play().then(() => {
-          webcamRunning = true;
-          console.log('Webcam started successfully');
-        }).catch((playError) => {
-          console.error('Failed to play video:', playError);
-          throw playError;
-        });
+        void activeVideo.play()
+          .then(() => {
+            console.log('Webcam started successfully');
+            console.log('Hand Tracking Video Playing:', {
+              paused: activeVideo.paused,
+              readyState: activeVideo.readyState,
+              videoWidth: activeVideo.videoWidth,
+              videoHeight: activeVideo.videoHeight,
+            });
+          })
+          .catch((playError) => {
+            console.error('Failed to play video:', playError);
+          });
       };
+
+      activeVideo.oncanplay = null;
+      activeVideo.onerror = null;
+
+      activeVideo.srcObject = stream;
+      console.log('Hand Tracking Stream Attached:', {
+        hasSrcObject: !!activeVideo.srcObject,
+        active: stream.active,
+        videoTracks: stream.getVideoTracks().map((track) => ({
+          kind: track.kind,
+          readyState: track.readyState,
+          enabled: track.enabled,
+          muted: track.muted,
+        })),
+      });
 
       // Wait for video to be ready
       await new Promise<void>((resolve, reject) => {
@@ -98,13 +125,13 @@ const startWebcam = async (): Promise<void> => {
           reject(new Error('Video ready timeout'));
         }, 5000);
 
-        if (video) {
-          video.oncanplay = () => {
+        if (activeVideo) {
+          activeVideo.oncanplay = () => {
             clearTimeout(timeout);
             resolve();
           };
 
-          video.onerror = () => {
+          activeVideo.onerror = () => {
             clearTimeout(timeout);
             reject(new Error('Video error'));
           };
@@ -126,15 +153,21 @@ export const stopWebcam = (): void => {
   if (video && video.srcObject) {
     const stream = video.srcObject as MediaStream;
     stream.getTracks().forEach((track) => track.stop());
-    webcamRunning = false;
+    video.onloadedmetadata = null;
+    video.oncanplay = null;
+    video.onerror = null;
+    video.pause();
+    video.srcObject = null;
   }
+
+  webcamRunning = false;
 };
 
 /**
  * Detect hand pose from current video frame
  */
 export const detectHandPose = (
-  timestamp: number = Date.now()
+  timestamp: number = typeof performance !== 'undefined' ? performance.now() : Date.now()
 ): HandPose | null => {
   if (
     !handDetector ||
@@ -152,20 +185,12 @@ export const detectHandPose = (
 
     if (results.landmarks && results.landmarks.length > 0) {
       const landmarks = results.landmarks[0];
-      const handedness = results.handedness?.[0];
-
-      // Check if video is mirrored via CSS transform
-      const isVideoMirrored = video.style.transform.includes('scaleX(-1)');
+      const handedness = results.handedness?.[0] ?? results.handednesses?.[0];
 
       // Convert normalized coordinates (0-1) to pixel coordinates
       const points: Point[] = landmarks.map((landmark: any) => {
-        let x = landmark.x * (video?.videoWidth || 1280);
-        if (isVideoMirrored) {
-          // Flip X-coordinate to match mirrored video display
-          x = (1 - landmark.x) * (video?.videoWidth || 1280);
-        }
         return {
-          x,
+          x: landmark.x * (video?.videoWidth || 1280),
           y: landmark.y * (video?.videoHeight || 720),
         };
       });
@@ -173,7 +198,7 @@ export const detectHandPose = (
       return {
         landmarks: points,
         confidence: handedness?.score || 0.9,
-        handedness: handedness?.categoryName || 'Right',
+        handedness: (handedness?.categoryName || handedness?.displayName || 'Right') as 'Left' | 'Right',
       };
     }
 

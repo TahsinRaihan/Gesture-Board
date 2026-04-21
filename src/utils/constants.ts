@@ -41,13 +41,13 @@ export const CANVAS_HEIGHT = 1080;
 export const HAND_TRACKING_CONFIG = {
   MODEL_ASSET_PATH:
     'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm',
-  DETECTION_CONFIDENCE: 0.3,
-  TRACKING_CONFIDENCE: 0.3,
+  DETECTION_CONFIDENCE: 0.25,
+  TRACKING_CONFIDENCE: 0.25,
   RUN_MODE: 'VIDEO' as const,
 };
 
 export const GESTURE_CONFIG = {
-  PINCH_THRESHOLD: 0.3, // Increased to 30% for easier pinch detection
+  PINCH_THRESHOLD: 0.35, // Slightly more forgiving pinch detection
   POINT_THRESHOLD: 0.1,
 };
 

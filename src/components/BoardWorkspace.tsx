@@ -6,13 +6,13 @@ import { ArrowLeft, Save, UserPlus } from "lucide-react"
 
 import { initializeHandTracking, detectHandPose, stopWebcam } from "../services/handTracking"
 import { detectGestureSmoothed, getIndexFingerTip } from "../services/gestureDetector"
-import { initCanvasRenderer, drawLayers, drawCursor, cleanupCanvasRenderer } from "../services/canvasRenderer"
+import { initCanvasRenderer, drawLayers, drawCursor, cleanupCanvasRenderer, drawHandLandmarksOverlay } from "../services/canvasRenderer"
 import { startAutoSave, stopAutoSave } from "../services/storageService"
 import { collaborationService } from "../services/collaborationService"
 
-import { handleGesture, handleGestureReleased } from "../controllers/gestureController"
-import { startDrawing, continueDrawing, finishDrawing, getObjectAtPoint, startDraggingObject, dragObject, stopDraggingObject } from "../controllers/drawingController"
-import { processAirMouseCursor } from "../controllers/cursorController"
+import { handleGesture, handleGestureReleased, resetGestureController } from "../controllers/gestureController"
+import { startDrawing, continueDrawing, finishDrawing, getObjectAtPoint, startDraggingObject, dragObject, stopDraggingObject, dragStartPoint } from "../controllers/drawingController"
+import { processAirMouseCursor, resetCursorSmoothing } from "../controllers/cursorController"
 import { updateBoxSelectionPoint } from "../controllers/selectionController"
 
 import Toolbar from "../views/components/Toolbar"
@@ -36,6 +36,7 @@ const BoardWorkspace: React.FC = () => {
   const state = useStore()
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const landmarkCanvasRef = useRef<HTMLCanvasElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const animationRef = useRef<number>()
   const isDraggingRef = useRef(false)
@@ -142,30 +143,25 @@ const BoardWorkspace: React.FC = () => {
 
     const setupHandTracking = async () => {
       try {
-        // Wait for video element to be ready
-        if (videoRef.current && videoRef.current.readyState === 0) {
-          await new Promise((resolve) => {
-            const checkReady = () => {
-              if (videoRef.current && videoRef.current.readyState >= videoRef.current.HAVE_METADATA) {
-                resolve(void 0);
-              } else {
-                setTimeout(checkReady, 100);
-              }
-            };
-            checkReady();
-          });
-        }
-
+        console.log('Hand Tracking Setup: starting initializeHandTracking immediately', {
+          readyState: videoRef.current?.readyState,
+          hasVideoElement: !!videoRef.current,
+        })
         await initializeHandTracking(videoRef.current!)
       } catch (error) {
         console.error("Failed to initialize hand tracking:", error)
+        state.setHandGestureEnabled(false)
       }
     }
 
     setupHandTracking()
 
+    console.log('Hand Tracking Init Requested: waiting for active MediaStream on videoRef')
+
     return () => {
       stopWebcam()
+      resetGestureController()
+      resetCursorSmoothing()
     }
   }, [state.isHandGestureEnabled, appReady])
 
@@ -218,11 +214,17 @@ const BoardWorkspace: React.FC = () => {
           currentState.deselectObject()
         }
       } else if (currentState.activeTool === "drag") {
+        console.log('Drag Tool: Checking for collision at', point.x, point.y)
         const obj = getObjectAtPoint(point, 15)
         if (obj) {
+          console.log('Drag Tool: Collision found for object', obj.id)
+          currentState.selectObject(obj.id)
           startDraggingObject(point)
           isDraggingRef.current = true
           draggingObjectIdRef.current = obj.id
+        } else {
+          currentState.deselectObject()
+          console.log('Drag Tool: No collision found at', point.x, point.y)
         }
       } else {
         currentState.deselectObject()
@@ -268,6 +270,15 @@ const BoardWorkspace: React.FC = () => {
       if (currentState.activeTool === "select" && isDraggingRef.current && draggingObjectIdRef.current) {
         dragObject(point, draggingObjectIdRef.current)
       } else if (currentState.activeTool === "drag" && isDraggingRef.current && draggingObjectIdRef.current) {
+        const selectedObject = currentState.layers
+          .flatMap((layer) => layer.objects)
+          .find((object) => object.id === draggingObjectIdRef.current)
+
+        const deltaX = dragStartPoint ? point.x - dragStartPoint.x : 0
+        const deltaY = dragStartPoint ? point.y - dragStartPoint.y : 0
+        const baseX = selectedObject?.x ?? selectedObject?.points[0]?.x ?? 0
+        const baseY = selectedObject?.y ?? selectedObject?.points[0]?.y ?? 0
+        console.log('Dragging object ID:', draggingObjectIdRef.current, 'New X/Y:', baseX + deltaX, baseY + deltaY)
         dragObject(point, draggingObjectIdRef.current)
       } else {
         if (!isDraggingRef.current) {
@@ -277,12 +288,18 @@ const BoardWorkspace: React.FC = () => {
       }
     }
 
-    const handleMouseUp = () => {
+    const handleMouseUp = (e: MouseEvent) => {
       const currentState = useStore.getState()
 
       if (isDraggingPanel === "pan") {
         setIsDraggingPanel(null)
         return
+      }
+
+      const rect = canvas.getBoundingClientRect()
+      const point = {
+        x: (e.clientX - rect.left) / zoom - panX,
+        y: (e.clientY - rect.top) / zoom - panY,
       }
 
       if (currentState.activeTool === "drag" && isDraggingRef.current) {
@@ -296,7 +313,7 @@ const BoardWorkspace: React.FC = () => {
         draggingObjectIdRef.current = null
         currentState.pushHistory()
       } else {
-        finishDrawing({ x: 0, y: 0 })
+        finishDrawing(point)
       }
     }
 
@@ -333,19 +350,27 @@ const BoardWorkspace: React.FC = () => {
 
       drawLayers(currentState.layers)
 
+      const videoElement = videoRef.current
+      const overlayCanvas = landmarkCanvasRef.current
+      const sourceWidth = videoElement?.videoWidth || 1280
+      const sourceHeight = videoElement?.videoHeight || 720
+
       let cursorScreenPoint = currentState.cursorPosition
       let canvasPoint = currentState.canvasCursorPosition
 
       if (currentState.isHandGestureEnabled) {
+        console.log('Detection Loop Running, Video ReadyState:', videoElement?.readyState, 'Has MediaStream:', !!videoElement?.srcObject, 'Paused:', videoElement?.paused)
         const handPose = detectHandPose()
         currentState.setHandPose(handPose)
+
+        drawHandLandmarksOverlay(overlayCanvas, handPose, sourceWidth, sourceHeight)
 
         if (handPose) {
           console.log('Hand detected:', handPose)
           const indexTip = getIndexFingerTip(handPose)
-          if (indexTip && videoRef.current) {
+          if (indexTip && videoElement) {
             console.log('Index tip:', indexTip)
-            cursorScreenPoint = processAirMouseCursor(indexTip, videoRef.current)
+            cursorScreenPoint = processAirMouseCursor(indexTip, videoElement)
 
             const canvasRect = canvasRef.current.getBoundingClientRect()
             canvasPoint = {
@@ -355,6 +380,14 @@ const BoardWorkspace: React.FC = () => {
             currentState.setCursorPosition(cursorScreenPoint)
             currentState.setCanvasCursorPosition(canvasPoint)
           }
+
+          console.log('Hand Tracking Video Source:', {
+            hasSrcObject: !!videoElement?.srcObject,
+            paused: videoElement?.paused,
+            readyState: videoElement?.readyState,
+            videoWidth: videoElement?.videoWidth,
+            videoHeight: videoElement?.videoHeight,
+          })
 
           const gesture = detectGestureSmoothed(handPose)
           currentState.setCurrentGesture(gesture)
@@ -386,8 +419,11 @@ const BoardWorkspace: React.FC = () => {
           console.log('No hand detected')
           currentState.setCurrentGesture({ type: 'none', confidence: 0 })
           handleGestureReleased(currentState.canvasCursorPosition)
+          resetGestureController()
+          resetCursorSmoothing()
         }
       } else {
+        drawHandLandmarksOverlay(overlayCanvas, null, sourceWidth, sourceHeight)
         drawCursor(currentState.canvasCursorPosition)
       }
 
@@ -480,19 +516,33 @@ const BoardWorkspace: React.FC = () => {
 
       {/* VIDEO FEED - Z: 1000 */}
       {state.isHandGestureEnabled && (
-        <video
-          ref={videoRef}
-          className="fixed bottom-5 right-5 w-48 h-36 border-2 border-green-500 rounded-lg"
+        <div
+          className="fixed bottom-5 right-5 w-48 h-36 pointer-events-none"
           style={{
             zIndex: 1000,
-            transform: 'scaleX(-1)',
-            pointerEvents: 'none',
             boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
-            objectFit: 'cover',
           }}
-          playsInline
-          muted
-        />
+        >
+          <video
+            ref={videoRef}
+            className="absolute inset-0 w-full h-full border-2 border-green-500 rounded-lg"
+            style={{
+              transform: 'scaleX(-1)',
+              pointerEvents: 'none',
+              objectFit: 'cover',
+            }}
+            playsInline
+            muted
+          />
+          <canvas
+            ref={landmarkCanvasRef}
+            className="absolute inset-0 w-full h-full rounded-lg"
+            style={{
+              transform: 'scaleX(-1)',
+              pointerEvents: 'none',
+            }}
+          />
+        </div>
       )}
 
       {/* HEADER - Z: 100 */}

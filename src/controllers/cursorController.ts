@@ -16,16 +16,17 @@ let lastRawPos: Point = { x: 0, y: 0 };
  * Applies smoothing, dead zone, and acceleration
  */
 export const processAirMouseCursor = (rawPosition: Point, videoElement: HTMLVideoElement): Point => {
-  const videoRect = videoElement.getBoundingClientRect();
   const videoWidth = videoElement.videoWidth || 1280;
   const videoHeight = videoElement.videoHeight || 720;
-  
-  // Map video coordinates to video element coordinates
-  // Since the video is mirrored (scaleX(-1)), we need to flip X
-  const videoX = ((videoWidth - rawPosition.x) / videoWidth) * videoRect.width + videoRect.left;
-  const videoY = (rawPosition.y / videoHeight) * videoRect.height + videoRect.top;
-  
-  const mappedPosition = { x: videoX, y: videoY };
+
+  // Map the source video coordinates into the global viewport, not the popup bounds.
+  // The preview is mirrored, so the X axis is flipped before projecting into screen space.
+  const normalizedX = Math.max(0, Math.min(1, rawPosition.x / videoWidth));
+  const normalizedY = Math.max(0, Math.min(1, rawPosition.y / videoHeight));
+  const mappedPosition = {
+    x: (1 - normalizedX) * window.innerWidth,
+    y: normalizedY * window.innerHeight,
+  };
 
   // Step 1: Calculate velocity for acceleration
   const deltaX = mappedPosition.x - lastRawPos.x;

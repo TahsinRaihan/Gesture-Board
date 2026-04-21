@@ -9,6 +9,57 @@ import { smoothPoints } from '@/utils/helpers';
 let canvasContext: CanvasRenderingContext2D | null = null;
 let canvas: HTMLCanvasElement | null = null;
 
+const HAND_CONNECTIONS: Array<[number, number]> = [
+  [0, 1], [1, 2], [2, 3], [3, 4],
+  [0, 5], [5, 6], [6, 7], [7, 8],
+  [0, 9], [9, 10], [10, 11], [11, 12],
+  [0, 13], [13, 14], [14, 15], [15, 16],
+  [0, 17], [17, 18], [18, 19], [19, 20],
+  [5, 9], [9, 13], [13, 17],
+];
+
+const getHandPointColor = (index: number): string => {
+  if (index === 0) return '#FF6B6B';
+  if (index >= 1 && index <= 4) return '#4ECDC4';
+  if (index >= 5 && index <= 8) return '#45B7D1';
+  if (index >= 9 && index <= 12) return '#FFA07A';
+  if (index >= 13 && index <= 16) return '#98D8C8';
+  return '#F7DC6F';
+};
+
+const drawHandSkeleton = (context: CanvasRenderingContext2D, landmarks: Point[]): void => {
+  context.strokeStyle = '#00FF00';
+  context.lineWidth = 2;
+
+  HAND_CONNECTIONS.forEach(([start, end]) => {
+    const startLandmark = landmarks[start];
+    const endLandmark = landmarks[end];
+    if (!startLandmark || !endLandmark) return;
+
+    context.beginPath();
+    context.moveTo(startLandmark.x, startLandmark.y);
+    context.lineTo(endLandmark.x, endLandmark.y);
+    context.stroke();
+  });
+
+  landmarks.forEach((landmark, index) => {
+    context.fillStyle = getHandPointColor(index);
+    context.beginPath();
+    context.arc(landmark.x, landmark.y, index === 0 ? 8 : 5, 0, 2 * Math.PI);
+    context.fill();
+
+    context.strokeStyle = '#FFFFFF';
+    context.lineWidth = 1;
+    context.stroke();
+
+    if (index === 0 || index === 4 || index === 8 || index === 12 || index === 16 || index === 20) {
+      context.fillStyle = '#FFFFFF';
+      context.font = 'bold 10px Arial';
+      context.fillText(index.toString(), landmark.x + 8, landmark.y - 8);
+    }
+  });
+};
+
 /**
  * Initialize canvas rendering
  */
@@ -604,63 +655,60 @@ export const drawMarqueeBox = (startX: number, startY: number, endX: number, end
 export const drawHandLandmarks = (handPose: HandPose | null): void => {
   if (!canvasContext || !handPose) return;
 
-  const landmarks = handPose.landmarks;
+  drawHandSkeleton(canvasContext, handPose.landmarks);
+};
 
-  // Hand skeleton connections (MediaPipe format)
-  const connections = [
-    [0, 1], [1, 2], [2, 3], [3, 4], // Thumb
-    [0, 5], [5, 6], [6, 7], [7, 8], // Index
-    [0, 9], [9, 10], [10, 11], [11, 12], // Middle
-    [0, 13], [13, 14], [14, 15], [15, 16], // Ring
-    [0, 17], [17, 18], [18, 19], [19, 20], // Pinky
-    [5, 9], [9, 13], [13, 17], // Palm connections
-  ];
+/**
+ * Draw hand landmarks and skeleton on an arbitrary overlay canvas.
+ * The overlay is expected to be visually aligned with the webcam feed.
+ */
+export const drawHandLandmarksOverlay = (
+  overlayCanvas: HTMLCanvasElement | null,
+  handPose: HandPose | null,
+  sourceWidth: number,
+  sourceHeight: number,
+  flipHorizontal: boolean = false
+): void => {
+  if (!overlayCanvas) return;
 
-  // Draw skeleton (connections)
-  canvasContext.strokeStyle = '#00FF00';
-  canvasContext.lineWidth = 2;
-  connections.forEach(([start, end]) => {
-    const startLandmark = landmarks[start];
-    const endLandmark = landmarks[end];
-    if (startLandmark && endLandmark) {
-      canvasContext!.beginPath();
-      canvasContext!.moveTo(startLandmark.x, startLandmark.y);
-      canvasContext!.lineTo(endLandmark.x, endLandmark.y);
-      canvasContext!.stroke();
-    }
+  const context = overlayCanvas.getContext('2d');
+  if (!context) return;
+
+  const cssWidth = overlayCanvas.clientWidth || overlayCanvas.width || 1;
+  const cssHeight = overlayCanvas.clientHeight || overlayCanvas.height || 1;
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  const nextWidth = Math.max(1, Math.round(cssWidth * devicePixelRatio));
+  const nextHeight = Math.max(1, Math.round(cssHeight * devicePixelRatio));
+
+  if (overlayCanvas.width !== nextWidth) {
+    overlayCanvas.width = nextWidth;
+  }
+
+  if (overlayCanvas.height !== nextHeight) {
+    overlayCanvas.height = nextHeight;
+  }
+
+  context.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  context.clearRect(0, 0, cssWidth, cssHeight);
+
+  if (!handPose) return;
+
+  const displayScale = Math.max(cssWidth / sourceWidth, cssHeight / sourceHeight);
+  const displayWidth = sourceWidth * displayScale;
+  const displayHeight = sourceHeight * displayScale;
+  const offsetX = (cssWidth - displayWidth) / 2;
+  const offsetY = (cssHeight - displayHeight) / 2;
+
+  const transformedLandmarks = handPose.landmarks.map((landmark) => {
+    const normalizedX = Math.max(0, Math.min(1, landmark.x / sourceWidth));
+    const normalizedY = Math.max(0, Math.min(1, landmark.y / sourceHeight));
+    const drawX = (flipHorizontal ? 1 - normalizedX : normalizedX) * displayWidth + offsetX;
+    const drawY = normalizedY * displayHeight + offsetY;
+
+    return { x: drawX, y: drawY };
   });
 
-  // Draw landmark points
-  landmarks.forEach((landmark: Point, index: number) => {
-    // Color code by finger
-    let color = '#FF6B6B'; // Default red for wrist
-    if (index >= 1 && index <= 4) color = '#4ECDC4'; // Thumb - teal
-    if (index >= 5 && index <= 8) color = '#45B7D1'; // Index - blue
-    if (index >= 9 && index <= 12) color = '#FFA07A'; // Middle - coral
-    if (index >= 13 && index <= 16) color = '#98D8C8'; // Ring - mint
-    if (index >= 17 && index <= 20) color = '#F7DC6F'; // Pinky - yellow
-
-    // Wrist is larger
-    const radius = index === 0 ? 8 : 5;
-
-    // Draw filled circle
-    canvasContext!.fillStyle = color;
-    canvasContext!.beginPath();
-    canvasContext!.arc(landmark.x, landmark.y, radius, 0, 2 * Math.PI);
-    canvasContext!.fill();
-
-    // Draw outline
-    canvasContext!.strokeStyle = '#FFFFFF';
-    canvasContext!.lineWidth = 1;
-    canvasContext!.stroke();
-
-    // Label important points
-    if (index === 0 || index === 4 || index === 8 || index === 12 || index === 16 || index === 20) {
-      canvasContext!.fillStyle = '#FFFFFF';
-      canvasContext!.font = 'bold 10px Arial';
-      canvasContext!.fillText(index.toString(), landmark.x + 8, landmark.y - 8);
-    }
-  });
+  drawHandSkeleton(context, transformedLandmarks);
 };
 
 /**

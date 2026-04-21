@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { Camera, CameraOff } from 'lucide-react';
 import { useStore } from '@/store/store';
+import { stopWebcam } from '@/services/handTracking';
 import '../styles/CameraToggle.css';
 
 const CameraToggle: React.FC = () => {
@@ -17,13 +18,9 @@ const CameraToggle: React.FC = () => {
 
     try {
       if (state.isHandGestureEnabled) {
+        stopWebcam();
         state.setHandGestureEnabled(false);
       } else {
-        // Request camera permission
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-        });
-        stream.getTracks().forEach((track) => track.stop());
         state.setHandGestureEnabled(true);
       }
     } catch (error: any) {

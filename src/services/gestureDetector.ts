@@ -43,7 +43,7 @@ const isOpenHand = (landmarks: Point[]): boolean => {
   const avgSpread = spreadSum / 10; // 5 choose 2 = 10 pairs
   const handSize = distance(landmarks[0], landmarks[9]);
 
-  return avgSpread > handSize * 0.4;
+  return avgSpread > handSize * 0.35;
 };
 
 /**
@@ -109,16 +109,21 @@ const isPointingUp = (landmarks: Point[]): boolean => {
 
   if (!indexTip || !middleTip || !wrist) return false;
 
+  const handSize = distance(wrist, landmarks[9]) || 1;
+  const upwardThreshold = handSize * 0.55;
+  const sideBySideThreshold = handSize * 0.35;
+  const ringDownThreshold = handSize * 0.15;
+
   // Both fingers pointing upward (negative Y direction)
-  const indexUp = indexTip.y < wrist.y - 50;
-  const middleUp = middleTip.y < wrist.y - 50;
+  const indexUp = indexTip.y < wrist.y - upwardThreshold;
+  const middleUp = middleTip.y < wrist.y - upwardThreshold;
 
   // Should be side by side (similar X)
-  const sideBySide = Math.abs(indexTip.x - middleTip.x) < 50;
+  const sideBySide = Math.abs(indexTip.x - middleTip.x) < sideBySideThreshold;
 
   // Ring finger should not extend
   const ringTip = landmarks[16];
-  const ringDown = ringTip && ringTip.y > wrist.y - 20;
+  const ringDown = ringTip && ringTip.y > wrist.y - ringDownThreshold;
 
   return indexUp && middleUp && sideBySide && ringDown;
 };
